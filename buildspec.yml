@@ -1,0 +1,44 @@
+
+version: 0.2
+
+env:
+  variables:
+    AWS_ACCOUNT_ID: "983925251193"
+    CLUSTER: "BoMOnline"
+    REGION: "us-west-2" 
+    TAG: "latest"
+    REPOSITORY: scripture-search
+    SERVICE_NAME: scripture-search-svc
+    DOCKER_USERNAME: kckern
+    MYSQL_DB: "scripture.guide"
+    MYSQL_PORT: "3306"
+    #MYSQL_HOST: 
+    #MYSQL_USER: 
+    #MYSQL_PASS:
+    #DOCKER_PASSWORD: 
+phases:
+  pre_build:
+    commands:
+      ## Check if docker is installed
+      - echo Checking if Docker is installed...
+      - docker --version
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - echo Logging into AWS ECR...
+      - echo "Target repository:"
+      - echo $REPOSITORY
+      - aws --region $REGION ecr get-login-password | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image and adding tag - $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPOSITORY:$TAG
+      - docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPOSITORY:$TAG .  --build-arg MYSQL_HOST=$MYSQL_HOST --build-arg MYSQL_USER=$MYSQL_USER --build-arg MYSQL_PASS=$MYSQL_PASS --build-arg MYSQL_DB=$MYSQL_DB --build-arg MYSQL_PORT=$MYSQL_PORT
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPOSITORY:$TAG
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPOSITORY:$TAG
+      # Update task definition with new image
+
+      ## Deploy to ECS
+     # - echo Deploying the Docker image to ECS...
+      - aws ecs update-service --cluster $CLUSTER --service $SERVICE_NAME --force-new-deployment
