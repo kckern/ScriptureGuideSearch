@@ -20,8 +20,11 @@ RUN sed -i 's/MYSQL_HOST_PLACEHOLDER/'"$MYSQL_HOST"'/g' /opt/sphinx/conf/sphinx.
     sed -i 's/MYSQL_DB_PLACEHOLDER/'"$MYSQL_DB"'/g' /opt/sphinx/conf/sphinx.conf && \
     sed -i 's/MYSQL_PORT_PLACEHOLDER/'"$MYSQL_PORT"'/g' /opt/sphinx/conf/sphinx.conf && \
     cat /opt/sphinx/conf/sphinx.conf && \
+    apk add --no-cache mysql-client && \
     printf "#!/bin/bash\n\
 indexer sgindex --config /opt/sphinx/conf/sphinx.conf --rotate\n\
 searchd --config /opt/sphinx/conf/sphinx.conf --nodetach" > /start.sh && \
     chmod +x /start.sh
 CMD ["sh", "/start.sh"]
+
+HEALTHCHECK --interval=5m --timeout=3s CMD mysql --port=9306 --execute="SHOW TABLES;" || exit 1
